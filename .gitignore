@@ -1,0 +1,25 @@
+# Dipendenze
+frontend/node_modules/
+
+# Build
+frontend/dist/
+
+# Prompt privati
+prompt/
+prompt.txt
+
+# Config PHP locale (credenziali DB)
+backend/config.php
+
+# Claude Code
+.claude/
+
+# Variabili d'ambiente (contengono URL locali)
+frontend/.env.*
+!frontend/.env.example
+
+# Editor / OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
