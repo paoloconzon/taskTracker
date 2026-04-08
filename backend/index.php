@@ -35,6 +35,11 @@ try {
         case 'del':     handleDel($payload);                  break;
         case 'action':          handleAction($payload);         break;
         case 'cambio_password': handleCambioPassword($payload); break;
+        case 'mantis_import':      handleMantisImport($payload);                                                break;
+        case 'get_mantis_export':  getMantisExport($payload['data']['filtro'] ?? [], requireSession($payload)); break;
+        case 'set_esportato_mantis': setEsportatoMantis($payload['data'] ?? [], requireSession($payload));   break;
+        case 'get_profilo':     handleGetProfilo($payload);     break;
+        case 'save_profilo':    handleSaveProfilo($payload);    break;
         default:
             echo json_encode(['result'=>1,'message'=>"Funzione '$func' non riconosciuta",'data'=>new stdClass()]);
     }

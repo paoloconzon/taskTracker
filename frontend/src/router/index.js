@@ -8,7 +8,10 @@ const routes = [
   { path: '/log',       name: 'Log',       component: () => import('../views/LogView.vue') },
   { path: '/task-list',   name: 'TaskList',   component: () => import('../views/TaskListView.vue') },
   { path: '/task-attivo',      name: 'TaskAttivo',      component: () => import('../views/TaskAttivoView.vue') },
-  { path: '/cambio-password', name: 'CambioPassword', component: () => import('../views/CambioPasswordView.vue') },
+  { path: '/mantis-export',   name: 'MantisExport',   component: () => import('../views/MantisExportView.vue') },
+  { path: '/cambio-password', redirect: '/profilo' },
+  { path: '/profilo',         name: 'Profilo',        component: () => import('../views/ProfiloUtenteView.vue') },
+  { path: '/credits',         name: 'Credits',        component: () => import('../views/CreditsView.vue'),      meta: { public: true } },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 

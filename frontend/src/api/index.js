@@ -44,6 +44,9 @@ export const apiGetAzioni = () =>
 export const apiGetTask = (filtro = {}) =>
   call('get', { tab: 'task', filtro })
 
+export const apiGetUtenti = () =>
+  call('get', { tab: 'utenti', filtro: {} })
+
 export const apiGetTaskLog = (filtro = {}) =>
   call('get', { tab: 'task_log', filtro })
 
@@ -72,6 +75,15 @@ export const apiDelAzione   = (id) =>
 
 export const apiDelTaskLog  = (id) =>
   call('del', { tab: 'task_log',  id })
+
+// ---- MANTIS EXPORT ----------------------------------------------
+export const apiGetMantisExport     = (filtro)  => call('get_mantis_export',     { filtro })
+export const apiSetEsportatoMantis  = (idsLog)  => call('set_esportato_mantis',  { idsLog })
+export const apiMantisImport        = (righe)   => call('mantis_import',         { righe })
+
+// ---- PROFILO UTENTE ---------------------------------------------
+export const apiGetProfilo  = ()      => call('get_profilo',  {})
+export const apiSaveProfilo = (data)  => call('save_profilo', data)
 
 // ---- CAMBIO PASSWORD --------------------------------------------
 export const apiCambioPassword = (vecchia, nuova) =>

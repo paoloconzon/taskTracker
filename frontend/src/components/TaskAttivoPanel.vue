@@ -44,11 +44,12 @@
         />
 
         <!-- Descrizione task -->
-        <v-text-field
+        <v-textarea
           v-model="form.descrizione"
           label="Descrizione task"
           variant="outlined"
           density="compact"
+          rows="2"
           clearable
           class="mb-3"
         />
@@ -67,13 +68,13 @@
         <!-- Flag -->
         <v-row dense>
           <v-col cols="4">
-            <v-text-field v-model="form.flag1" label="Flag 1" variant="outlined" density="compact" />
+            <v-text-field v-model="form.mantis" label="Mantis" variant="outlined" density="compact" />
           </v-col>
           <v-col cols="4">
-            <v-text-field v-model="form.flag2" label="Flag 2" variant="outlined" density="compact" />
+            <v-text-field v-model="form.ticket" label="Ticket" variant="outlined" density="compact" />
           </v-col>
           <v-col cols="4">
-            <v-text-field v-model="form.flag3" label="Flag 3" variant="outlined" density="compact" />
+            <v-text-field v-model="form.tags" label="Tags" variant="outlined" density="compact" />
           </v-col>
         </v-row>
       </v-card-text>
@@ -134,7 +135,7 @@ const form = ref({
   id_azione:    null,
   descrizione:  '',
   note:         '',
-  flag1: '', flag2: '', flag3: '',
+  mantis: '', ticket: '', tags: '',
 })
 
 // Sync form quando cambia il task
@@ -145,7 +146,7 @@ watch(task, (t) => {
       id_azione:    t.id_azione    || null,
       descrizione:  t.descrizione  || '',
       note:         t.log_note     || '',
-      flag1: t.flag1 || '', flag2: t.flag2 || '', flag3: t.flag3 || '',
+      mantis: t.mantis || '', ticket: t.ticket || '', tags: t.tags || '',
     }
   }
 }, { immediate: true })
@@ -167,9 +168,9 @@ async function salva() {
       id_argomento: form.value.id_argomento,
       id_azione:    form.value.id_azione,
       descrizione:  form.value.descrizione,
-      flag1: form.value.flag1,
-      flag2: form.value.flag2,
-      flag3: form.value.flag3,
+      mantis: form.value.mantis,
+      ticket: form.value.ticket,
+      tags: form.value.tags,
       se_chiuso: 0,
     })
     // Aggiorna anche il log corrente (note)
@@ -182,6 +183,8 @@ async function salva() {
         note:           form.value.note,
       })
     }
+    const r = await apiGetTaskAttivo()
+    store.setTaskAttivo(r.data.task)
     window.$notify('Salvato!', 'success')
   } catch (e) {
     window.$notify(e.message, 'error')

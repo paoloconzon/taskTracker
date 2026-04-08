@@ -1,0 +1,22 @@
+<!--
+  MANTIS.wsdl — File WSDL locale per MantisConnect SOAP API
+  ==========================================================
+  Sostituire questo file con il WSDL reale scaricato dal proprio
+  server Mantis all'indirizzo:
+
+      http://<tuo-mantis>/api/soap/mantisconnect.php?wsdl
+
+  Oppure configurare l'URL WSDL direttamente nel Profilo utente
+  dell'applicazione (campo "URL WSDL Mantis").
+
+  Se questo file è presente e valido, verrà usato al posto
+  dell'URL remoto (più veloce, funziona offline).
+
+  Operazione utilizzata: mc_issue_note_add
+  Parametri:
+    - username    : string
+    - password    : string
+    - issue_id    : integer  (valore del campo "Mantis" sull'argomento)
+    - note        : IssueNoteData { text: string, time_tracking: string (minuti) }
+  Ritorna: integer (ID della nota inserita)
+-->

@@ -9,9 +9,12 @@ CREATE TABLE IF NOT EXISTS WP_TT_UTENTI (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     user        VARCHAR(50)  NOT NULL UNIQUE,
     pwd         VARCHAR(255) NOT NULL,
-    descrizione VARCHAR(255),
-    mail        VARCHAR(150),
-    gruppo      VARCHAR(100)
+    descrizione  VARCHAR(255),
+    mail         VARCHAR(150),
+    gruppo       VARCHAR(100),
+    mantis_user  VARCHAR(150),
+    mantis_pwd   VARCHAR(255),
+    mantis_wsdl  VARCHAR(500)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS WP_TT_SESSIONI (
@@ -33,9 +36,9 @@ CREATE TABLE IF NOT EXISTS WP_TT_ARGOMENTI (
     se_chiuso          TINYINT(1)   NOT NULL DEFAULT 0,
     se_pausa           TINYINT(1)   NOT NULL DEFAULT 0,
     se_personale       TINYINT(1)   NOT NULL DEFAULT 1,
-    flag1              VARCHAR(255),
-    flag2              VARCHAR(255),
-    flag3              VARCHAR(255),
+    mantis             VARCHAR(255),
+    ticket             VARCHAR(255),
+    tags               VARCHAR(255),
     FOREIGN KEY (id_argomento_padre) REFERENCES WP_TT_ARGOMENTI(id),
     FOREIGN KEY (id_utente)          REFERENCES WP_TT_UTENTI(id)
 ) ENGINE=InnoDB;
@@ -52,9 +55,9 @@ CREATE TABLE IF NOT EXISTS WP_TT_TASK (
     id_azione    INT         NULL,
     se_chiuso    TINYINT(1)   NOT NULL DEFAULT 0,
     descrizione  VARCHAR(1024),
-    flag1        VARCHAR(255),
-    flag2        VARCHAR(255),
-    flag3        VARCHAR(255),
+    mantis       VARCHAR(255),
+    ticket       VARCHAR(255),
+    tags         VARCHAR(255),
     FOREIGN KEY (id_utente)    REFERENCES WP_TT_UTENTI(id),
     FOREIGN KEY (id_argomento) REFERENCES WP_TT_ARGOMENTI(id),
     FOREIGN KEY (id_azione)    REFERENCES WP_TT_AZIONE(id)
@@ -62,11 +65,12 @@ CREATE TABLE IF NOT EXISTS WP_TT_TASK (
 
 CREATE TABLE IF NOT EXISTS WP_TT_TASK_LOG (
     id              INT AUTO_INCREMENT PRIMARY KEY,
-    id_task         INT      NOT NULL,
-    descrizione     VARCHAR(1024),
-    data_ora_inizio DATETIME NOT NULL,
-    data_ora_fine   DATETIME NULL,
-    note            TEXT,
+    id_task              INT           NOT NULL,
+    descrizione          VARCHAR(1024),
+    data_ora_inizio      DATETIME      NOT NULL,
+    data_ora_fine        DATETIME      NULL,
+    note                 TEXT,
+    se_esportato_mantis  TINYINT(1)    NOT NULL DEFAULT 0,
     FOREIGN KEY (id_task) REFERENCES WP_TT_TASK(id)
 ) ENGINE=InnoDB;
 

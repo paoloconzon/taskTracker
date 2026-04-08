@@ -27,16 +27,40 @@
       </v-card-title>
 
       <v-card-text class="pb-0">
-        <v-text-field
-          v-model="testo"
-          label="Cerca..."
-          prepend-inner-icon="mdi-magnify"
-          variant="outlined"
-          density="compact"
-          clearable
-          style="max-width:320px"
-          @keyup.enter="load"
-        />
+        <v-row dense align="center">
+          <v-col cols="6" sm="3">
+            <v-text-field
+              v-model="daData"
+              label="Da data"
+              type="date"
+              variant="outlined"
+              density="compact"
+            />
+          </v-col>
+          <v-col cols="6" sm="3">
+            <v-text-field
+              v-model="aData"
+              label="A data"
+              type="date"
+              variant="outlined"
+              density="compact"
+            />
+          </v-col>
+          <v-col cols="12" sm="4">
+            <v-text-field
+              v-model="testo"
+              label="Cerca..."
+              prepend-inner-icon="mdi-magnify"
+              variant="outlined"
+              density="compact"
+              clearable
+              @keyup.enter="load"
+            />
+          </v-col>
+          <v-col cols="auto">
+            <v-btn color="primary" @click="load">Filtra</v-btn>
+          </v-col>
+        </v-row>
       </v-card-text>
 
       <v-progress-linear v-if="loading" indeterminate />
@@ -67,14 +91,17 @@
               </v-chip>
             </div>
 
-            <!-- Riga 2: descrizione + flag1 + flag2 -->
-            <div v-if="task.descrizione || task.flag1 || task.flag2" class="d-flex align-center gap-2 flex-wrap mt-1">
-              <span v-if="task.descrizione" class="descrizione">{{ task.descrizione }}</span>
-              <v-chip v-if="task.flag1" size="small" variant="tonal" color="deep-purple">
-                {{ task.flag1 }}
+            <!-- Riga 2: descrizione + mantis + ticket -->
+            <div v-if="task.descrizione || task.mantis || task.ticket" class="d-flex align-start gap-2 flex-wrap mt-1">
+              <div v-if="task.descrizione" class="descrizione">
+                <div v-for="(riga, i) in descRighe(task.descrizione)" :key="i">{{ riga }}</div>
+                <span v-if="descTruncated(task.descrizione)" class="text-caption text-medium-emphasis">...</span>
+              </div>
+              <v-chip v-if="task.mantis" size="small" variant="tonal" color="deep-purple">
+                {{ task.mantis }}
               </v-chip>
-              <v-chip v-if="task.flag2" size="small" variant="tonal" color="indigo">
-                {{ task.flag2 }}
+              <v-chip v-if="task.ticket" size="small" variant="tonal" color="indigo">
+                {{ task.ticket }}
               </v-chip>
             </div>
 
@@ -139,6 +166,8 @@ const loading      = ref(false)
 const tasks        = ref([])
 const mostraChiusi = ref(false)
 const testo        = ref('')
+const daData       = ref(dayjs().subtract(30, 'day').format('YYYY-MM-DD'))
+const aData        = ref(dayjs().format('YYYY-MM-DD'))
 const riprendendo  = ref(null)
 const chiudendo    = ref(null)
 const ordinamento  = ref('recenti')
@@ -162,7 +191,9 @@ async function load() {
   try {
     const r = await apiGetTask({
       seMostraChiusi: mostraChiusi.value,
-      testo: testo.value || undefined,
+      testo:  testo.value || undefined,
+      daData: daData.value.replace(/-/g, ''),
+      aData:  aData.value.replace(/-/g, ''),
     })
     tasks.value = r.data.elenco
   } catch (e) {
@@ -199,6 +230,15 @@ async function chiudi(task) {
   } finally {
     chiudendo.value = null
   }
+}
+
+function descRighe(s) {
+  if (!s) return []
+  return s.split(/\r?\n/).filter(r => r.trim()).slice(0, 5)
+}
+function descTruncated(s) {
+  if (!s) return false
+  return s.split(/\r?\n/).filter(r => r.trim()).length > 5
 }
 
 function formatDurata(sec) {

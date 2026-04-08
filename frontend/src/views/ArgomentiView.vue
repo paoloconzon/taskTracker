@@ -190,13 +190,13 @@
             <!-- Flags -->
             <v-row dense>
               <v-col cols="4">
-                <v-text-field v-model="form.flag1" label="Flag 1" variant="outlined" density="compact" />
+                <v-text-field v-model="form.mantis" label="Mantis" variant="outlined" density="compact" />
               </v-col>
               <v-col cols="4">
-                <v-text-field v-model="form.flag2" label="Flag 2" variant="outlined" density="compact" />
+                <v-text-field v-model="form.ticket" label="Ticket" variant="outlined" density="compact" />
               </v-col>
               <v-col cols="4">
-                <v-text-field v-model="form.flag3" label="Flag 3" variant="outlined" density="compact" />
+                <v-text-field v-model="form.tags" label="Tags" variant="outlined" density="compact" />
               </v-col>
             </v-row>
 
@@ -288,7 +288,7 @@ function emptyForm(padre = null) {
     id: null, nome: '', id_argomento_padre: padre?.id || null,
     descrizione: '', colore: '#607D8B', icona: 'mdi-folder',
     se_chiuso: false, se_pausa: false, se_personale: true,
-    flag1: padre?.flag1 || '', flag2: padre?.flag2 || '', flag3: padre?.flag3 || '',
+    mantis: padre?.mantis || '', ticket: padre?.ticket || '', tags: padre?.tags || '',
   }
 }
 
@@ -415,7 +415,7 @@ function seleziona(item) {
     se_chiuso:    !!item.se_chiuso,
     se_pausa:     !!item.se_pausa,
     se_personale: item.se_personale !== undefined ? !!item.se_personale : true,
-    flag1: item.flag1 || '', flag2: item.flag2 || '', flag3: item.flag3 || '',
+    mantis: item.mantis || '', ticket: item.ticket || '', tags: item.tags || '',
   }
 }
 

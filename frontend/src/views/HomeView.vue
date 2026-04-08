@@ -57,14 +57,6 @@
               </v-col>
             </v-row>
 
-            <v-row v-else-if="argomenti.length === 0">
-              <v-col>
-                <v-alert type="info" variant="tonal">
-                  {{ filtroTesto ? 'Nessun argomento trovato per "' + filtroTesto + '"' : 'Nessun argomento disponibile' }}
-                </v-alert>
-              </v-col>
-            </v-row>
-
             <v-row v-else>
               <!-- Tile "torna su" (solo in navigazione gerarchica) -->
               <v-col v-if="breadcrumb.length && !filtroTesto" cols="6" sm="4" lg="3">
@@ -80,6 +72,12 @@
                     <div class="text-subtitle-2 font-weight-bold text-grey">Su</div>
                   </v-card-text>
                 </v-card>
+              </v-col>
+
+              <v-col v-if="argomenti.length === 0" cols="12">
+                <v-alert type="info" variant="tonal">
+                  {{ filtroTesto ? 'Nessun argomento trovato per "' + filtroTesto + '"' : 'Nessun argomento disponibile' }}
+                </v-alert>
               </v-col>
 
               <v-col
@@ -139,13 +137,13 @@
 
           <v-row dense>
             <v-col cols="4">
-              <v-text-field v-model="nuovoTask.flag1" label="Flag 1" variant="outlined" density="compact" />
+              <v-text-field v-model="nuovoTask.mantis" label="Mantis" variant="outlined" density="compact" />
             </v-col>
             <v-col cols="4">
-              <v-text-field v-model="nuovoTask.flag2" label="Flag 2" variant="outlined" density="compact" />
+              <v-text-field v-model="nuovoTask.ticket" label="Ticket" variant="outlined" density="compact" />
             </v-col>
             <v-col cols="4">
-              <v-text-field v-model="nuovoTask.flag3" label="Flag 3" variant="outlined" density="compact" />
+              <v-text-field v-model="nuovoTask.tags" label="Tags" variant="outlined" density="compact" />
             </v-col>
           </v-row>
         </v-card-text>
@@ -162,7 +160,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTaskStore }             from '../stores/task.js'
 import { apiGetArgomenti, apiGetAzioni, apiPutTask, apiGetTaskAttivo } from '../api/index.js'
 import ArgomentoTile   from '../components/ArgomentoTile.vue'
@@ -177,7 +175,7 @@ const filtroTesto        = ref('')
 const breadcrumb         = ref([])   // [{id, nome}]
 const dialogNuovoTask    = ref(false)
 const argomentoSelezionato = ref(null)
-const nuovoTask          = ref({ descrizione: '', id_azione: null, flag1: '', flag2: '', flag3: '' })
+const nuovoTask          = ref({ descrizione: '', id_azione: null, mantis: '', ticket: '', tags: '' })
 const saving             = ref(false)
 
 const breadcrumbItems = computed(() =>
@@ -251,7 +249,7 @@ function onDoubleClickArgomento(arg) {
   argomentoSelezionato.value = arg
   nuovoTask.value = {
     descrizione: '', id_azione: null,
-    flag1: arg.flag1 || '', flag2: arg.flag2 || '', flag3: arg.flag3 || '',
+    mantis: arg.mantis || '', ticket: arg.ticket || '', tags: arg.tags || '',
   }
   dialogNuovoTask.value = true
 }
@@ -272,9 +270,9 @@ async function avviaTask() {
       id_argomento: argomentoSelezionato.value.id,
       id_azione:    nuovoTask.value.id_azione,
       descrizione:  nuovoTask.value.descrizione,
-      flag1:        nuovoTask.value.flag1 || null,
-      flag2:        nuovoTask.value.flag2 || null,
-      flag3:        nuovoTask.value.flag3 || null,
+      mantis:        nuovoTask.value.mantis || null,
+      ticket:        nuovoTask.value.ticket || null,
+      tags:        nuovoTask.value.tags || null,
     })
     // Ricarica task attivo
     const ta = await apiGetTaskAttivo()

@@ -12,11 +12,13 @@
         <v-list-item to="/"          prepend-icon="mdi-home"               title="Nuovo Task" />
         <v-list-item to="/task-list" prepend-icon="mdi-format-list-checks" title="Task recenti" />
         <v-list-item to="/argomenti" prepend-icon="mdi-tag-multiple"       title="Argomenti" />
-        <v-list-item to="/log"       prepend-icon="mdi-table-clock"        title="Log attività" />
+        <v-list-item to="/log"          prepend-icon="mdi-table-clock"        title="Log attività" />
+        <v-list-item to="/mantis-export" prepend-icon="mdi-bug-check"        title="Esporta Mantis" />
       </v-list>
       <template #append>
         <v-list density="compact" nav>
-          <v-list-item to="/cambio-password" prepend-icon="mdi-lock-reset" title="Cambio password" />
+          <v-list-item to="/profilo"  prepend-icon="mdi-account-cog"       title="Profilo utente" />
+          <v-list-item to="/credits" prepend-icon="mdi-information-outline" title="Credits" />
           <v-list-item prepend-icon="mdi-logout" title="Logout" @click="logout" />
         </v-list>
       </template>

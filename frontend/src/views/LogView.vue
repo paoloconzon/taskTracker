@@ -45,6 +45,19 @@
               @keyup.enter="load"
             />
           </v-col>
+          <v-col v-if="sess.isAdmin()" cols="12" sm="3">
+            <v-select
+              v-model="filtro.idUtente"
+              :items="utenti"
+              item-title="descrizione"
+              item-value="id"
+              label="Utente"
+              variant="outlined"
+              density="compact"
+              clearable
+              hide-details
+            />
+          </v-col>
           <v-col cols="12" sm="2" class="d-flex align-center gap-2">
             <v-switch
               v-model="mostraPausa"
@@ -66,7 +79,8 @@
         hover
         :items-per-page="50"
         class="log-table"
-        @click:row="(_, { item }) => apriEdit(item)"
+        :row-props="({ item }) => item.id_utente_task === sess.idUtente ? {} : { class: 'row-readonly' }"
+        @click:row="(_, { item }) => { if (item.id_utente_task === sess.idUtente) apriEdit(item) }"
       >
         <template #item.utente_descrizione="{ item }">
           <span class="text-caption">{{ item.utente_descrizione }}</span>
@@ -101,9 +115,13 @@
         </template>
 
         <template #item.descrizione="{ item }">
-          <span class="text-caption">{{ item.descrizione }}</span>
-          <div v-if="item.note" class="text-caption text-medium-emphasis font-italic">
-            📝 {{ item.note }}
+          <div v-if="item.descrizione">
+            <div v-for="(riga, i) in descRighe(item.descrizione)" :key="i" class="text-caption">{{ riga }}</div>
+            <span v-if="descTruncated(item.descrizione)" class="text-caption text-medium-emphasis">...</span>
+          </div>
+          <div v-if="item.note" class="text-caption text-medium-emphasis font-italic mt-1">
+            <div v-for="(riga, i) in descRighe(item.note)" :key="i">📝 {{ riga }}</div>
+            <span v-if="descTruncated(item.note)">...</span>
           </div>
         </template>
 
@@ -160,11 +178,12 @@
             </v-col>
           </v-row>
 
-          <v-text-field
+          <v-textarea
             v-model="editForm.descrizione"
             label="Descrizione"
             variant="outlined"
             density="compact"
+            rows="3"
             clearable
             class="mb-3"
           />
@@ -196,7 +215,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { apiGetTaskLog, apiPutTaskLog, apiDelTaskLog } from '../api/index.js'
+import { apiGetTaskLog, apiPutTaskLog, apiDelTaskLog, apiGetUtenti } from '../api/index.js'
 import { useSessionStore } from '../stores/session.js'
 import dayjs               from 'dayjs'
 import * as XLSX           from 'xlsx'
@@ -211,8 +230,9 @@ const dialog  = ref(false)
 const editForm = ref(null)
 
 const today      = dayjs().format('YYYY-MM-DD')
-const filtro     = ref({ daData: today, aData: today, testo: '' })
+const filtro     = ref({ daData: today, aData: today, testo: '', idUtente: null })
 const mostraPausa = ref(false)
+const utenti     = ref([])  // lista utenti per filtro admin
 
 const righeFiltrate = computed(() =>
   mostraPausa.value ? righe.value : righe.value.filter(r => !r.se_pausa)
@@ -261,9 +281,10 @@ async function load() {
   loading.value = true
   try {
     const f = {
-      daData: filtro.value.daData.replace(/-/g, ''),
-      aData:  filtro.value.aData.replace(/-/g, ''),
-      testo:  filtro.value.testo || undefined,
+      daData:    filtro.value.daData.replace(/-/g, ''),
+      aData:     filtro.value.aData.replace(/-/g, ''),
+      testo:     filtro.value.testo || undefined,
+      idUtente:  filtro.value.idUtente || undefined,
     }
     const r = await apiGetTaskLog(f)
     righe.value         = r.data.elenco
@@ -308,6 +329,15 @@ async function elimina() {
   } finally {
     deleting.value = false
   }
+}
+
+function descRighe(s) {
+  if (!s) return []
+  return s.split(/\r?\n/).filter(r => r.trim()).slice(0, 5)
+}
+function descTruncated(s) {
+  if (!s) return false
+  return s.split(/\r?\n/).filter(r => r.trim()).length > 5
 }
 
 function formatDurata(sec) {
@@ -356,8 +386,8 @@ function esportaExcel() {
       'Nipote':          nipote,
       'Azione':          r.azione_nome || '',
       'Descrizione':     r.descrizione || '',
-      'Flag1':           r.task_flag1  || '',
-      'Flag2':           r.task_flag2  || '',
+      'Mantis':          r.task_mantis  || '',
+      'Ticket':          r.task_ticket  || '',
       'Note':            r.note        || '',
     }
   })
@@ -372,10 +402,20 @@ function esportaExcel() {
   XLSX.writeFile(wb, nome)
 }
 
-onMounted(load)
+onMounted(async () => {
+  await load()
+  if (sess.isAdmin()) {
+    try {
+      const r = await apiGetUtenti()
+      utenti.value = r.data.elenco
+    } catch { /* non bloccante */ }
+  }
+})
 </script>
 
 <style>
 .log-table .v-data-table__tr { cursor: pointer; }
 .log-table .v-data-table__tr:hover td { background: rgba(21,101,192,.05) !important; }
+.log-table .row-readonly { cursor: default; opacity: .65; }
+.log-table .row-readonly:hover td { background: transparent !important; }
 </style>

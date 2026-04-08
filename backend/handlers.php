@@ -58,6 +58,7 @@ function handleGet(array $payload): void {
         case 'task':        getTask($f, $sess);         break;
         case 'task_log':    getTaskLog($f, $sess);      break;
         case 'task_attivo': getTaskAttivo($sess);       break;
+        case 'utenti':      getUtenti($sess);           break;
         default: err("Tabella '$tab' non supportata");
     }
 }
@@ -78,8 +79,8 @@ function getArgomenti(array $f, array $sess): void {
         $where[] = 'a.se_chiuso = 0';
     }
 
-    // Argomenti personali visibili solo al proprio proprietario
-    $where[] = '(a.se_personale = 0 OR a.id_utente = ? OR a.id_utente IS NULL)';
+    // Visibili solo gli argomenti propri o condivisi (id_utente NULL)
+    $where[] = '(a.id_utente IS NULL OR a.id_utente = ?)';
     $bind[]  = $sess['idUtente'];
     if (!empty($f['testo'])) {
         $where[] = '(a.nome LIKE ? OR a.descrizione LIKE ?)';
@@ -103,6 +104,12 @@ function getAzioni(array $sess): void {
     ok(['elenco' => $rows]);
 }
 
+function getUtenti(array $sess): void {
+    if ($sess['gruppo'] !== 'admin') err('Non autorizzato');
+    $rows = getDB()->query('SELECT id, user, descrizione FROM WP_TT_UTENTI ORDER BY descrizione')->fetchAll();
+    ok(['elenco' => $rows]);
+}
+
 function getTask(array $f, array $sess): void {
     $db    = getDB();
     $where = ['t.id_utente = ?'];
@@ -118,6 +125,17 @@ function getTask(array $f, array $sess): void {
         $where[] = '(t.descrizione LIKE ? OR arg.nome LIKE ? OR p1.nome LIKE ? OR p2.nome LIKE ?)';
         $t = '%'.$f['testo'].'%';
         $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t;
+    }
+
+    if (!empty($f['daData'])) {
+        $da      = DateTime::createFromFormat('Ymd', $f['daData'])->format('Y-m-d');
+        $where[] = 'EXISTS (SELECT 1 FROM WP_TT_TASK_LOG tl2 WHERE tl2.id_task = t.id AND DATE(tl2.data_ora_inizio) >= ?)';
+        $bind[]  = $da;
+    }
+    if (!empty($f['aData'])) {
+        $a       = DateTime::createFromFormat('Ymd', $f['aData'])->format('Y-m-d');
+        $where[] = 'EXISTS (SELECT 1 FROM WP_TT_TASK_LOG tl2 WHERE tl2.id_task = t.id AND DATE(tl2.data_ora_inizio) <= ?)';
+        $bind[]  = $a;
     }
 
     // JOIN espliciti su 3 livelli: il path NONNO/PADRE/FIGLIO viene composto in PHP
@@ -187,6 +205,12 @@ function getTaskLog(array $f, array $sess): void {
     $where[] = 'DATE(tl.data_ora_inizio) <= ?';
     $bind[]  = DateTime::createFromFormat('Ymd', $aData)->format('Y-m-d');
 
+    // Filtro per utente specifico (solo admin)
+    if ($isAdmin && !empty($f['idUtente'])) {
+        $where[] = 't.id_utente = ?';
+        $bind[]  = (int)$f['idUtente'];
+    }
+
     if (!empty($f['testo'])) {
         $where[] = '(tl.descrizione LIKE ? OR tl.note LIKE ? OR arg.nome LIKE ? OR p1.nome LIKE ? OR p2.nome LIKE ? OR az.nome LIKE ?)';
         $t = '%'.$f['testo'].'%';
@@ -195,9 +219,10 @@ function getTaskLog(array $f, array $sess): void {
 
     $sql = 'SELECT tl.*,
                    t.id_argomento,
+                   t.id_utente  as id_utente_task,
                    t.se_chiuso as task_chiuso,
-                   t.flag1     as task_flag1,
-                   t.flag2     as task_flag2,
+                   t.mantis     as task_mantis,
+                   t.ticket     as task_ticket,
                    arg.nome   as argomento_nome,
                    arg.colore as argomento_colore,
                    arg.icona  as argomento_icona,
@@ -294,20 +319,20 @@ function putArgomento(array $v, array $sess): void {
     if (!empty($v['id'])) {
         $db->prepare(
             'UPDATE WP_TT_ARGOMENTI SET nome=?,id_argomento_padre=?,descrizione=?,colore=?,icona=?,
-                                   se_chiuso=?,se_personale=?,flag1=?,flag2=?,flag3=?
+                                   se_chiuso=?,se_personale=?,mantis=?,ticket=?,tags=?
               WHERE id=?'
         )->execute([
             $v['nome'], $v['id_argomento_padre'] ?: null, $v['descrizione'] ?? null,
             $v['colore'] ?? '#607D8B', $v['icona'] ?? 'mdi-folder',
             $v['se_chiuso'] ? 1 : 0,
             isset($v['se_personale']) ? ($v['se_personale'] ? 1 : 0) : 1,
-            $v['flag1'] ?? null, $v['flag2'] ?? null, $v['flag3'] ?? null,
+            $v['mantis'] ?? null, $v['ticket'] ?? null, $v['tags'] ?? null,
             $v['id']
         ]);
         ok(['id' => (int)$v['id']]);
     } else {
         $db->prepare(
-            'INSERT INTO WP_TT_ARGOMENTI (id_utente,nome,id_argomento_padre,descrizione,colore,icona,se_chiuso,se_personale,flag1,flag2,flag3)
+            'INSERT INTO WP_TT_ARGOMENTI (id_utente,nome,id_argomento_padre,descrizione,colore,icona,se_chiuso,se_personale,mantis,ticket,tags)
              VALUES (?,?,?,?,?,?,?,?,?,?,?)'
         )->execute([
             $sess['idUtente'],
@@ -315,7 +340,7 @@ function putArgomento(array $v, array $sess): void {
             $v['colore'] ?? '#607D8B', $v['icona'] ?? 'mdi-folder',
             $v['se_chiuso'] ? 1 : 0,
             isset($v['se_personale']) ? ($v['se_personale'] ? 1 : 0) : 1,
-            $v['flag1'] ?? null, $v['flag2'] ?? null, $v['flag3'] ?? null,
+            $v['mantis'] ?? null, $v['ticket'] ?? null, $v['tags'] ?? null,
         ]);
         ok(['id' => (int)$db->lastInsertId()]);
     }
@@ -339,12 +364,12 @@ function putTask(array $v, array $sess): void {
     if (!empty($v['id'])) {
         // Aggiornamento task esistente
         $db->prepare(
-            'UPDATE WP_TT_TASK SET id_argomento=?,id_azione=?,se_chiuso=?,descrizione=?,flag1=?,flag2=?,flag3=?
+            'UPDATE WP_TT_TASK SET id_argomento=?,id_azione=?,se_chiuso=?,descrizione=?,mantis=?,ticket=?,tags=?
               WHERE id=? AND id_utente=?'
         )->execute([
             $v['id_argomento'], $v['id_azione'] ?: null,
             $v['se_chiuso'] ? 1 : 0, $v['descrizione'] ?? null,
-            $v['flag1'] ?? null, $v['flag2'] ?? null, $v['flag3'] ?? null,
+            $v['mantis'] ?? null, $v['ticket'] ?? null, $v['tags'] ?? null,
             $v['id'], $sess['idUtente']
         ]);
 
@@ -360,12 +385,12 @@ function putTask(array $v, array $sess): void {
         chiudiTaskAttivo($sess['idUtente'], $db, $now);
 
         $db->prepare(
-            'INSERT INTO WP_TT_TASK (id_utente,id_argomento,id_azione,se_chiuso,descrizione,flag1,flag2,flag3)
+            'INSERT INTO WP_TT_TASK (id_utente,id_argomento,id_azione,se_chiuso,descrizione,mantis,ticket,tags)
              VALUES (?,?,?,0,?,?,?,?)'
         )->execute([
             $sess['idUtente'], $v['id_argomento'], $v['id_azione'] ?: null,
             $v['descrizione'] ?? null,
-            $v['flag1'] ?? null, $v['flag2'] ?? null, $v['flag3'] ?? null,
+            $v['mantis'] ?? null, $v['ticket'] ?? null, $v['tags'] ?? null,
         ]);
         $taskId = (int)$db->lastInsertId();
 
@@ -511,6 +536,287 @@ function doChiudiTask(int $idTask, array $sess): void {
         'UPDATE WP_TT_TASK SET se_chiuso=1 WHERE id=? AND id_utente=?'
     )->execute([$idTask, $sess['idUtente']]);
 
+    ok();
+}
+
+// ============================================================
+// MANTIS IMPORT  (raw SOAP XML via curl → mc_issue_add)
+// ============================================================
+function buildMantisXml(string $user, string $pwd, string $issueId, string $testo, int $minuti): string {
+    $esc = fn(string $s): string => htmlspecialchars($s, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+    return <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:man="http://futureware.biz/mantisconnect">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <man:mc_issue_note_add soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+      <username xsi:type="xsd:string">{$esc($user)}</username>
+      <password xsi:type="xsd:string">{$esc($pwd)}</password>
+      <issue_id xsi:type="xsd:integer">{$esc($issueId)}</issue_id>
+      <note xsi:type="man:IssueNoteData">
+        <text xsi:type="xsd:string">{$esc($testo)}</text>
+        <time_tracking xsi:type="xsd:integer">{$minuti}</time_tracking>
+      </note>
+    </man:mc_issue_note_add>
+  </soapenv:Body>
+</soapenv:Envelope>
+XML;
+}
+
+function handleMantisImport(array $payload): void {
+    $sess  = requireSession($payload);
+    $data  = $payload['data'] ?? [];
+    $righe = $data['righe']   ?? [];
+
+    // Credenziali Mantis dell'utente
+    $db   = getDB();
+    $stmt = $db->prepare('SELECT mantis_user, mantis_pwd, mantis_wsdl FROM WP_TT_UTENTI WHERE id = ?');
+    $stmt->execute([$sess['idUtente']]);
+    $utente = $stmt->fetch();
+
+    if (empty($utente['mantis_user'])) err('Utente Mantis non configurato nel profilo');
+    if (empty($utente['mantis_pwd']))  err('Password Mantis non configurata nel profilo');
+
+    // Ricava endpoint SOAP dall'URL WSDL (rimuove ?wsdl)
+    $endpoint = preg_replace('/\?wsdl\s*$/i', '', trim($utente['mantis_wsdl'] ?? ''));
+    if (!$endpoint) err('URL SOAP Mantis non configurato nel profilo');
+
+    // Raggruppa per mantis, scarta righe senza mantis
+    $gruppi = [];
+    foreach ($righe as $r) {
+        $mantisId = trim($r['mantis'] ?? '');
+        if ($mantisId === '') continue;
+        $gruppi[$mantisId][] = $r;
+    }
+    if (empty($gruppi)) err('Nessuna riga con il campo Mantis valorizzato');
+
+    $risultati    = [];
+    $idsEsportati = [];
+
+    foreach ($gruppi as $mantisId => $rows) {
+        $secondiTot  = 0;
+        $blocchi     = [];
+
+        foreach ($rows as $r) {
+            $giorno  = (new DateTime($r['giorno']))->format('d/m/y');
+            $tempo   = mantisFormatDurata((int)$r['secondi_totali']);
+            $ticket  = trim($r['ticket'] ?? '');
+            $riga2   = ($ticket ? "ticket n.$ticket" : "attivita n.{$r['id_task']}") . " - tempo $tempo";
+            $desc    = trim(str_replace(["\r\n", "\r", "\n"], "\n", $r['descrizioni'] ?? ''));
+            $blocchi[]   = "attività giorno $giorno\n$riga2\n$desc";
+            $secondiTot += (int)$r['secondi_totali'];
+        }
+
+        $testo   = implode("\n\n", $blocchi);
+        $minuti  = (int)round($secondiTot / 60);
+
+        $xml = buildMantisXml(
+            $utente['mantis_user'],
+            $utente['mantis_pwd'],
+            $mantisId,
+            $testo,
+            $minuti
+        );
+
+        try {
+            $ch = curl_init($endpoint);
+            curl_setopt_array($ch, [
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => $xml,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER     => [
+                    'Content-Type: text/xml; charset=utf-8',
+                    'SOAPAction: "mc_issue_note_add"',
+                    'Content-Length: ' . strlen($xml),
+                ],
+                CURLOPT_TIMEOUT        => 30,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => false,
+            ]);
+
+            $response  = curl_exec($ch);
+            $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlError) {
+                $risultati[$mantisId] = [
+                    'ok'       => false,
+                    'errore'   => "cURL error: $curlError",
+                    'endpoint' => $endpoint,
+                    'xml'      => $xml,
+                    'response' => null,
+                    'httpCode' => 0,
+                ];
+                continue;
+            }
+
+            // Estrae ID nota dalla risposta
+            $noteId = null;
+            if ($response && preg_match('/<(?:[^:>\s]+:)?return[^>]*>(\d+)</', $response, $m)) {
+                $noteId = (int)$m[1];
+            }
+
+            $ok = ($httpCode >= 200 && $httpCode < 300);
+            $risultati[$mantisId] = [
+                'ok'       => $ok,
+                'note_id'  => $noteId,
+                'endpoint' => $endpoint,
+                'xml'      => $xml,
+                'response' => $response,
+                'httpCode' => $httpCode,
+            ];
+            if (!$ok) continue;
+
+            foreach ($rows as $r) {
+                foreach (explode(',', $r['ids_log']) as $id) {
+                    $idsEsportati[] = (int)$id;
+                }
+            }
+        } catch (Throwable $e) {
+            $risultati[$mantisId] = [
+                'ok'       => false,
+                'errore'   => $e->getMessage(),
+                'endpoint' => $endpoint,
+                'xml'      => $xml,
+                'response' => null,
+                'httpCode' => 0,
+            ];
+        }
+    }
+
+    // Marca come esportati solo i log inseriti con successo
+    if ($idsEsportati) {
+        $ph   = implode(',', array_fill(0, count($idsEsportati), '?'));
+        $bind = array_merge($idsEsportati, [$sess['idUtente']]);
+        $db->prepare(
+            "UPDATE WP_TT_TASK_LOG tl
+               JOIN WP_TT_TASK t ON t.id = tl.id_task
+                SET tl.se_esportato_mantis = 1
+              WHERE tl.id IN ($ph) AND t.id_utente = ?"
+        )->execute($bind);
+    }
+
+    ok(['risultati' => $risultati]);
+}
+
+function mantisFormatDurata(int $sec): string {
+    $h = (int)floor($sec / 3600);
+    $m = (int)floor(($sec % 3600) / 60);
+    return $h > 0 ? "{$h}h {$m}m" : "{$m}m";
+}
+
+// ============================================================
+// MANTIS EXPORT
+// ============================================================
+function getMantisExport(array $f, array $sess): void {
+    $db = getDB();
+
+    $daData = $f['daData'] ?? date('Ymd', strtotime('-30 days'));
+    $aData  = $f['aData']  ?? date('Ymd');
+    $da     = DateTime::createFromFormat('Ymd', $daData)->format('Y-m-d');
+    $a      = DateTime::createFromFormat('Ymd', $aData)->format('Y-m-d');
+
+    $sql = 'SELECT
+              DATE(tl.data_ora_inizio)                                              AS giorno,
+              t.mantis,
+              t.ticket,
+              t.tags,
+              tl.id_task,
+              arg.nome                                                               AS argomento_nome,
+              arg.colore                                                             AS argomento_colore,
+              arg.icona                                                              AS argomento_icona,
+              p1.nome                                                                AS arg_padre_nome,
+              SUM(TIMESTAMPDIFF(SECOND, tl.data_ora_inizio,
+                                IFNULL(tl.data_ora_fine, NOW())))                   AS secondi_totali,
+              GROUP_CONCAT(DISTINCT tl.descrizione
+                           ORDER BY tl.id SEPARATOR "\n")                           AS descrizioni,
+              GROUP_CONCAT(tl.id ORDER BY tl.id SEPARATOR ",")                     AS ids_log
+            FROM WP_TT_TASK_LOG tl
+            JOIN WP_TT_TASK        t   ON t.id    = tl.id_task
+            JOIN WP_TT_ARGOMENTI   arg ON arg.id  = t.id_argomento
+            LEFT JOIN WP_TT_ARGOMENTI p1 ON p1.id = arg.id_argomento_padre
+            WHERE tl.se_esportato_mantis = 0
+              AND tl.data_ora_fine IS NOT NULL
+              AND DATE(tl.data_ora_inizio) >= ?
+              AND DATE(tl.data_ora_inizio) <= ?
+              AND t.id_utente = ?
+              AND arg.se_pausa = 0
+            GROUP BY DATE(tl.data_ora_inizio), t.mantis, t.ticket, tl.id_task
+            ORDER BY giorno DESC, t.mantis, t.ticket, tl.id_task';
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$da, $a, $sess['idUtente']]);
+    ok(['elenco' => $stmt->fetchAll()]);
+}
+
+function setEsportatoMantis(array $data, array $sess): void {
+    $idsLog = array_map('intval', $data['idsLog'] ?? []);
+    if (empty($idsLog)) err('Nessun record selezionato');
+
+    $db           = getDB();
+    $placeholders = implode(',', array_fill(0, count($idsLog), '?'));
+    $bind         = array_merge($idsLog, [$sess['idUtente']]);
+
+    $db->prepare(
+        "UPDATE WP_TT_TASK_LOG tl
+           JOIN WP_TT_TASK t ON t.id = tl.id_task
+            SET tl.se_esportato_mantis = 1
+          WHERE tl.id IN ($placeholders)
+            AND t.id_utente = ?"
+    )->execute($bind);
+
+    ok();
+}
+
+// ============================================================
+// PROFILO UTENTE  (GET + SAVE)
+// ============================================================
+function handleGetProfilo(array $payload): void {
+    $sess = requireSession($payload);
+    $db   = getDB();
+    $stmt = $db->prepare(
+        'SELECT mantis_user, mantis_wsdl FROM WP_TT_UTENTI WHERE id = ?'
+    );
+    $stmt->execute([$sess['idUtente']]);
+    $row = $stmt->fetch();
+    // mantis_pwd non viene mai restituita al frontend
+    ok([
+        'mantis_user' => $row['mantis_user'] ?? '',
+        'mantis_wsdl' => $row['mantis_wsdl'] ?? '',
+    ]);
+}
+
+function handleSaveProfilo(array $payload): void {
+    $sess = requireSession($payload);
+    $data = $payload['data'] ?? [];
+
+    $db   = getDB();
+    $sets = [];
+    $bind = [];
+
+    if (array_key_exists('mantis_user', $data)) {
+        $sets[] = 'mantis_user = ?';
+        $bind[] = $data['mantis_user'] ?: null;
+    }
+    if (array_key_exists('mantis_wsdl', $data)) {
+        $sets[] = 'mantis_wsdl = ?';
+        $bind[] = $data['mantis_wsdl'] ?: null;
+    }
+    // Aggiorna mantis_pwd solo se esplicitamente fornita
+    if (!empty($data['mantis_pwd'])) {
+        $sets[] = 'mantis_pwd = ?';
+        $bind[] = $data['mantis_pwd'];
+    }
+
+    if ($sets) {
+        $bind[] = $sess['idUtente'];
+        $db->prepare('UPDATE WP_TT_UTENTI SET '.implode(', ', $sets).' WHERE id = ?')
+           ->execute($bind);
+    }
     ok();
 }
 
