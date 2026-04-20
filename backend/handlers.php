@@ -122,9 +122,15 @@ function getTask(array $f, array $sess): void {
     $where[] = 'arg.se_pausa = 0';
 
     if (!empty($f['testo'])) {
-        $where[] = '(t.descrizione LIKE ? OR arg.nome LIKE ? OR p1.nome LIKE ? OR p2.nome LIKE ?)';
+        $where[] = '(t.descrizione LIKE ? OR t.mantis LIKE ? OR t.ticket LIKE ?
+                     OR arg.nome LIKE ? OR p1.nome LIKE ? OR p2.nome LIKE ?
+                     OR EXISTS (SELECT 1 FROM WP_TT_TASK_LOG tl3
+                                 WHERE tl3.id_task = t.id
+                                   AND (tl3.descrizione LIKE ? OR tl3.note LIKE ?)))';
         $t = '%'.$f['testo'].'%';
-        $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t;
+        $bind[] = $t; $bind[] = $t; $bind[] = $t;
+        $bind[] = $t; $bind[] = $t; $bind[] = $t;
+        $bind[] = $t; $bind[] = $t;
     }
 
     if (!empty($f['daData'])) {
@@ -197,13 +203,19 @@ function getTaskLog(array $f, array $sess): void {
         $bind  = [$sess['idUtente']];
     }
 
-    $daData = $f['daData'] ?? date('Ymd');
-    $aData  = $f['aData']  ?? date('Ymd');
+    // Filtro per task specifico (storia log): salta range date
+    if (!empty($f['idTask'])) {
+        $where[] = 'tl.id_task = ?';
+        $bind[]  = (int)$f['idTask'];
+    } else {
+        $daData = $f['daData'] ?? date('Ymd');
+        $aData  = $f['aData']  ?? date('Ymd');
 
-    $where[] = 'DATE(tl.data_ora_inizio) >= ?';
-    $bind[]  = DateTime::createFromFormat('Ymd', $daData)->format('Y-m-d');
-    $where[] = 'DATE(tl.data_ora_inizio) <= ?';
-    $bind[]  = DateTime::createFromFormat('Ymd', $aData)->format('Y-m-d');
+        $where[] = 'DATE(tl.data_ora_inizio) >= ?';
+        $bind[]  = DateTime::createFromFormat('Ymd', $daData)->format('Y-m-d');
+        $where[] = 'DATE(tl.data_ora_inizio) <= ?';
+        $bind[]  = DateTime::createFromFormat('Ymd', $aData)->format('Y-m-d');
+    }
 
     // Filtro per utente specifico (solo admin)
     if ($isAdmin && !empty($f['idUtente'])) {
@@ -212,9 +224,9 @@ function getTaskLog(array $f, array $sess): void {
     }
 
     if (!empty($f['testo'])) {
-        $where[] = '(tl.descrizione LIKE ? OR tl.note LIKE ? OR arg.nome LIKE ? OR p1.nome LIKE ? OR p2.nome LIKE ? OR az.nome LIKE ?)';
+        $where[] = '(tl.descrizione LIKE ? OR tl.note LIKE ? OR arg.nome LIKE ? OR p1.nome LIKE ? OR p2.nome LIKE ? OR az.nome LIKE ? OR t.mantis LIKE ? OR t.ticket LIKE ?)';
         $t = '%'.$f['testo'].'%';
-        $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t;
+        $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t;
     }
 
     $sql = 'SELECT tl.*,
@@ -363,15 +375,28 @@ function putTask(array $v, array $sess): void {
 
     if (!empty($v['id'])) {
         // Aggiornamento task esistente
-        $db->prepare(
-            'UPDATE WP_TT_TASK SET id_argomento=?,id_azione=?,se_chiuso=?,descrizione=?,mantis=?,ticket=?,tags=?
-              WHERE id=? AND id_utente=?'
-        )->execute([
-            $v['id_argomento'], $v['id_azione'] ?: null,
-            $v['se_chiuso'] ? 1 : 0, $v['descrizione'] ?? null,
-            $v['mantis'] ?? null, $v['ticket'] ?? null, $v['tags'] ?? null,
-            $v['id'], $sess['idUtente']
-        ]);
+        // Se 'descrizione' non è presente nel payload non la sovrascrive
+        if (array_key_exists('descrizione', $v)) {
+            $db->prepare(
+                'UPDATE WP_TT_TASK SET id_argomento=?,id_azione=?,se_chiuso=?,descrizione=?,mantis=?,ticket=?,tags=?
+                  WHERE id=? AND id_utente=?'
+            )->execute([
+                $v['id_argomento'], $v['id_azione'] ?: null,
+                $v['se_chiuso'] ? 1 : 0, $v['descrizione'],
+                $v['mantis'] ?? null, $v['ticket'] ?? null, $v['tags'] ?? null,
+                $v['id'], $sess['idUtente']
+            ]);
+        } else {
+            $db->prepare(
+                'UPDATE WP_TT_TASK SET id_argomento=?,id_azione=?,se_chiuso=?,mantis=?,ticket=?,tags=?
+                  WHERE id=? AND id_utente=?'
+            )->execute([
+                $v['id_argomento'], $v['id_azione'] ?: null,
+                $v['se_chiuso'] ? 1 : 0,
+                $v['mantis'] ?? null, $v['ticket'] ?? null, $v['tags'] ?? null,
+                $v['id'], $sess['idUtente']
+            ]);
+        }
 
         // Se chiude il task, chiude anche il log aperto
         if (!empty($v['se_chiuso'])) {

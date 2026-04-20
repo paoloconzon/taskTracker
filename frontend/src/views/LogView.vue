@@ -114,6 +114,12 @@
           </v-chip>
         </template>
 
+        <template #item.task_ticket="{ item }">
+          <v-chip v-if="item.task_ticket" size="x-small" variant="tonal" color="indigo">
+            {{ item.task_ticket }}
+          </v-chip>
+        </template>
+
         <template #item.descrizione="{ item }">
           <div v-if="item.descrizione">
             <div v-for="(riga, i) in descRighe(item.descrizione)" :key="i" class="text-caption">{{ riga }}</div>
@@ -249,6 +255,7 @@ const headers = computed(() => {
     { title: 'Fine',               key: 'data_ora_fine',    sortable: false, width: '120px' },
     { title: 'Durata',             key: 'durata',           sortable: false, width: '90px'  },
     { title: 'Azione',             key: 'azione_nome',      sortable: true,  width: '120px' },
+    { title: 'Ticket',             key: 'task_ticket',      sortable: true,  width: '100px' },
     { title: 'Descrizione / Note', key: 'descrizione',      sortable: false },
   )
   return cols

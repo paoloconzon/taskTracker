@@ -124,6 +124,24 @@
               <v-spacer />
 
               <v-btn
+                icon
+                size="x-small"
+                variant="tonal"
+                title="Storia log"
+                @click.stop="apriStoria(task)"
+              >
+                <v-icon size="16">mdi-history</v-icon>
+              </v-btn>
+              <v-btn
+                icon
+                size="x-small"
+                variant="tonal"
+                title="Modifica descrizione task"
+                @click.stop="apriEditDescrizione(task)"
+              >
+                <v-icon size="16">mdi-pencil</v-icon>
+              </v-btn>
+              <v-btn
                 v-if="task.id !== taskAttivoId"
                 color="primary"
                 size="small"
@@ -153,12 +171,93 @@
       </v-list>
     </v-card>
   </v-container>
+
+  <!-- Dialog storia log task -->
+  <v-dialog v-model="storiaDialog" max-width="620" scrollable>
+    <v-card v-if="storiaTask">
+      <v-card-title class="pa-4 pb-2 d-flex align-center gap-2">
+        <v-icon>mdi-history</v-icon>
+        <span class="text-truncate">{{ storiaTask.argomento_path || storiaTask.argomento_nome }}</span>
+        <v-chip size="x-small" variant="tonal" color="grey">#{{ storiaTask.id }}</v-chip>
+        <v-spacer />
+        <v-btn icon size="small" variant="text" @click="storiaDialog = false">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-card-title>
+
+      <v-divider />
+
+      <v-card-text class="pa-3" style="max-height: 520px; overflow-y: auto;">
+        <div v-if="storiaLoading" class="d-flex justify-center pa-6">
+          <v-progress-circular indeterminate />
+        </div>
+        <div v-else-if="storiaLogs.length === 0" class="text-center text-medium-emphasis pa-6">
+          Nessun log trovato
+        </div>
+        <div v-else>
+          <div
+            v-for="log in storiaLogs"
+            :key="log.id"
+            class="storia-item mb-3 pa-3 rounded"
+          >
+            <div class="d-flex align-center gap-2 mb-1">
+              <v-icon size="14" color="primary">mdi-clock-outline</v-icon>
+              <span class="text-caption font-weight-bold text-primary">
+                {{ formatDatetime(log.data_ora_inizio) }}
+                <template v-if="log.data_ora_fine"> → {{ formatDatetime(log.data_ora_fine) }}</template>
+                <template v-else> <v-chip size="x-small" color="success" variant="elevated" class="ml-1">in corso</v-chip></template>
+              </span>
+              <v-chip size="x-small" color="primary" variant="tonal" class="ml-auto">
+                {{ formatDurata(log.secondi) }}
+              </v-chip>
+            </div>
+            <div v-if="log.descrizione" class="text-body-2 mb-1">
+              <div v-for="(riga, i) in log.descrizione.split(/\r?\n/).filter(r => r.trim())" :key="i">
+                {{ riga }}
+              </div>
+            </div>
+            <div v-if="log.note" class="storia-note text-caption mt-1">
+              <div v-for="(riga, i) in log.note.split(/\r?\n/).filter(r => r.trim())" :key="i">
+                {{ riga }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
+
+  <!-- Dialog modifica descrizione task -->
+  <v-dialog v-model="editDialog" max-width="520">
+    <v-card>
+      <v-card-title class="pa-4 pb-2">
+        <v-icon start>mdi-pencil</v-icon>
+        Modifica descrizione task #{{ editingTask?.id }}
+      </v-card-title>
+      <v-card-text>
+        <v-textarea
+          v-model="editingDescrizione"
+          label="Descrizione"
+          variant="outlined"
+          rows="4"
+          autofocus
+        />
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn @click="editDialog = false">Annulla</v-btn>
+        <v-btn color="primary" variant="elevated" :loading="salvandoDescrizione" @click="salvaDescrizione">
+          Salva
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useTaskStore }  from '../stores/task.js'
-import { apiGetTask, apiRiprendi, apiChiudiTask, apiGetTaskAttivo } from '../api/index.js'
+import { apiGetTask, apiRiprendi, apiChiudiTask, apiGetTaskAttivo, apiPutTask, apiGetTaskLog } from '../api/index.js'
 import dayjs             from 'dayjs'
 
 const store        = useTaskStore()
@@ -168,9 +267,17 @@ const mostraChiusi = ref(false)
 const testo        = ref('')
 const daData       = ref(dayjs().subtract(30, 'day').format('YYYY-MM-DD'))
 const aData        = ref(dayjs().format('YYYY-MM-DD'))
-const riprendendo  = ref(null)
-const chiudendo    = ref(null)
-const ordinamento  = ref('recenti')
+const riprendendo       = ref(null)
+const chiudendo         = ref(null)
+const ordinamento       = ref('recenti')
+const editDialog        = ref(false)
+const editingTask       = ref(null)
+const editingDescrizione = ref('')
+const salvandoDescrizione = ref(false)
+const storiaDialog      = ref(false)
+const storiaTask        = ref(null)
+const storiaLogs        = ref([])
+const storiaLoading     = ref(false)
 
 const taskAttivoId = computed(() => store.taskAttivo?.id || null)
 
@@ -183,7 +290,10 @@ const taskOrdinati = computed(() => {
       return (b.ultimo_inizio || '').localeCompare(a.ultimo_inizio || '')
     })
   }
-  return tasks.value // già ordinati per id DESC dal backend
+  // recenti: per ultimo task_log lavorato
+  return [...tasks.value].sort((a, b) =>
+    (b.ultimo_inizio || '').localeCompare(a.ultimo_inizio || '')
+  )
 })
 
 async function load() {
@@ -232,6 +342,41 @@ async function chiudi(task) {
   }
 }
 
+async function apriStoria(task) {
+  storiaTask.value = task
+  storiaLogs.value = []
+  storiaDialog.value = true
+  storiaLoading.value = true
+  try {
+    const r = await apiGetTaskLog({ idTask: task.id })
+    storiaLogs.value = r.data.elenco
+  } catch (e) {
+    window.$notify(e.message, 'error')
+  } finally {
+    storiaLoading.value = false
+  }
+}
+
+function apriEditDescrizione(task) {
+  editingTask.value = task
+  editingDescrizione.value = task.descrizione || ''
+  editDialog.value = true
+}
+
+async function salvaDescrizione() {
+  salvandoDescrizione.value = true
+  try {
+    await apiPutTask({ ...editingTask.value, descrizione: editingDescrizione.value })
+    editingTask.value.descrizione = editingDescrizione.value
+    editDialog.value = false
+    window.$notify('Descrizione aggiornata', 'success')
+  } catch (e) {
+    window.$notify(e.message, 'error')
+  } finally {
+    salvandoDescrizione.value = false
+  }
+}
+
 function descRighe(s) {
   if (!s) return []
   return s.split(/\r?\n/).filter(r => r.trim()).slice(0, 5)
@@ -274,5 +419,17 @@ onMounted(load)
   color: rgba(0,0,0,.87);
   border-left: 3px solid #1976d2;
   padding-left: 8px;
+}
+
+.storia-item {
+  background: rgba(0,0,0,.03);
+  border-left: 3px solid #1976d2;
+}
+
+.storia-note {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: .75rem;
+  color: rgba(0,0,0,.6);
+  white-space: pre-wrap;
 }
 </style>

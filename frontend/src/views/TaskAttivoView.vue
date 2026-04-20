@@ -43,10 +43,10 @@
           </v-col>
         </v-row>
 
-        <!-- Descrizione task -->
+        <!-- Descrizione log -->
         <v-textarea
           v-model="form.descrizione"
-          label="Descrizione task"
+          label="Descrizione log"
           variant="outlined"
           density="compact"
           rows="3"
@@ -127,7 +127,7 @@ watch(task, (t) => {
     form.value = {
       id_argomento: t.id_argomento,
       id_azione:    t.id_azione    || null,
-      descrizione:  t.descrizione  || '',
+      descrizione:  t.log_descrizione || '',
       note:         t.log_note     || '',
       mantis: t.mantis || '', ticket: t.ticket || '', tags: t.tags || '',
     }
@@ -150,7 +150,6 @@ async function salva() {
       id:           task.value.id,
       id_argomento: form.value.id_argomento,
       id_azione:    form.value.id_azione,
-      descrizione:  form.value.descrizione,
       mantis: form.value.mantis,
       ticket: form.value.ticket,
       tags: form.value.tags,
