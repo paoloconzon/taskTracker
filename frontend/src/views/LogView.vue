@@ -151,6 +151,8 @@
       </v-data-table>
     </v-card>
 
+    <LogPieChart :items="righeFiltrate" />
+
     <!-- Dialog modifica task log -->
     <v-dialog v-model="dialog" max-width="520" persistent>
       <v-card v-if="editForm">
@@ -225,6 +227,7 @@ import { apiGetTaskLog, apiPutTaskLog, apiDelTaskLog, apiGetUtenti } from '../ap
 import { useSessionStore } from '../stores/session.js'
 import dayjs               from 'dayjs'
 import * as XLSX           from 'xlsx'
+import LogPieChart         from '../components/LogPieChart.vue'
 
 const sess    = useSessionStore()
 const loading = ref(false)
