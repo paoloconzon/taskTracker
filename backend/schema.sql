@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS WP_TT_TASK (
     mantis       VARCHAR(255),
     ticket       VARCHAR(255),
     tags         VARCHAR(255),
+    priorita     ENUM('P1','P2','P3','P4','P5','P6') DEFAULT 'P3',
     FOREIGN KEY (id_utente)    REFERENCES WP_TT_UTENTI(id),
     FOREIGN KEY (id_argomento) REFERENCES WP_TT_ARGOMENTI(id),
     FOREIGN KEY (id_azione)    REFERENCES WP_TT_AZIONE(id)

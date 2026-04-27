@@ -367,11 +367,18 @@ function formatDatetime(s) {
   return dt.isValid() ? dt.format('DD/MM HH:mm') : s
 }
 
+function formatDurataHHmm(sec) {
+  if (!sec || sec < 0) return '00:00'
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
 function esportaExcel() {
-  const rows = righeFiltrate.value.map(r => {
+  // ========== FOGLIO 1: Singoli task_log ==========
+  const foglio1 = righeFiltrate.value.map(r => {
     const dt = dayjs(r.data_ora_inizio.replace(' ', ''), 'YYYYMMDDHHmmss')
 
-    // Scorre a sinistra: la radice va sempre in "Argomento"
     let argomento, figlio, nipote
     if (r.arg_nonno_nome) {
       argomento = r.arg_nonno_nome
@@ -390,7 +397,7 @@ function esportaExcel() {
     return {
       'Giorno':          dt.isValid() ? dt.format('DD/MM/YYYY') : '',
       'Ora inizio':      dt.isValid() ? dt.format('HH:mm') : '',
-      'Tempo impiegato': formatDurata(r.secondi),
+      'Tempo':           formatDurataHHmm(r.secondi),
       'Argomento':       argomento,
       'Figlio':          figlio,
       'Nipote':          nipote,
@@ -401,10 +408,104 @@ function esportaExcel() {
       'Note':            r.note        || '',
     }
   })
+  const totale1 = righeFiltrate.value.reduce((sum, r) => sum + (parseInt(r.secondi) || 0), 0)
+  foglio1.push({ 'Tempo': formatDurataHHmm(totale1) })
 
-  const ws = XLSX.utils.json_to_sheet(rows)
+  // ========== FOGLIO 2: Raggruppati per task ==========
+  const mapTask = new Map()
+  righeFiltrate.value.forEach(r => {
+    const key = r.id_task
+    if (!mapTask.has(key)) {
+      mapTask.set(key, {
+        id_task: r.id_task,
+        task_ticket: r.task_ticket,
+        task_mantis: r.task_mantis,
+        azione_nome: r.azione_nome,
+        task_priorita: r.task_priorita,
+        argomento_nome: r.argomento_nome,
+        arg_padre_nome: r.arg_padre_nome,
+        arg_nonno_nome: r.arg_nonno_nome,
+        task_descrizione: r.task_descrizione || '',
+        secondi: 0
+      })
+    }
+    const task = mapTask.get(key)
+    task.secondi += parseInt(r.secondi) || 0
+  })
+
+  const foglio2 = Array.from(mapTask.values()).map(task => {
+    // Costruisce il percorso dell'argomento (radice -> figlio)
+    let argomento = ''
+    if (task.arg_nonno_nome) {
+      argomento = `${task.arg_nonno_nome} / ${task.arg_padre_nome} / ${task.argomento_nome}`
+    } else if (task.arg_padre_nome) {
+      argomento = `${task.arg_padre_nome} / ${task.argomento_nome}`
+    } else {
+      argomento = task.argomento_nome || ''
+    }
+    
+    return {
+      'Tempo':                      formatDurataHHmm(task.secondi),
+      'Argomento':                  argomento,
+      'Azione':                     task.azione_nome || '',
+      'Priorità':                   task.task_priorita || '',
+      'Ticket':                     task.task_ticket || '',
+      'Mantis':                     task.task_mantis || '',
+      'Descrizione':                task.task_descrizione || ''
+    }
+  })
+  const totale2 = Array.from(mapTask.values()).reduce((sum, task) => sum + (task.secondi || 0), 0)
+  foglio2.push({ 'Tempo': formatDurataHHmm(totale2) })
+
+  // ========== FOGLIO 3: Raggruppati per argomento ==========
+  const mapArgomento = new Map()
+  righeFiltrate.value.forEach(r => {
+    const key = r.id_argomento
+    if (!mapArgomento.has(key)) {
+      mapArgomento.set(key, {
+        id_argomento: r.id_argomento,
+        argomento_nome: r.argomento_nome,
+        argomento_descrizione: r.argomento_descrizione,
+        arg_padre_nome: r.arg_padre_nome,
+        arg_nonno_nome: r.arg_nonno_nome,
+        task_mantis: r.task_mantis,
+        secondi: 0
+      })
+    }
+    const arg = mapArgomento.get(key)
+    arg.secondi += parseInt(r.secondi) || 0
+  })
+
+  const foglio3 = Array.from(mapArgomento.values()).map(arg => {
+    // Costruisce il percorso dell'argomento (radice -> figlio)
+    let argomento = ''
+    if (arg.arg_nonno_nome) {
+      argomento = `${arg.arg_nonno_nome} / ${arg.arg_padre_nome} / ${arg.argomento_nome}`
+    } else if (arg.arg_padre_nome) {
+      argomento = `${arg.arg_padre_nome} / ${arg.argomento_nome}`
+    } else {
+      argomento = arg.argomento_nome || ''
+    }
+    
+    return {
+      'Tempo':           formatDurataHHmm(arg.secondi),
+      'Argomento':       argomento,
+      'Descrizione':     arg.argomento_descrizione || '',
+      'Mantis':          arg.task_mantis || ''
+    }
+  })
+  const totale3 = Array.from(mapArgomento.values()).reduce((sum, arg) => sum + (arg.secondi || 0), 0)
+  foglio3.push({ 'Tempo': formatDurataHHmm(totale3) })
+
+  // Crea workbook con 3 fogli
+  const ws1 = XLSX.utils.json_to_sheet(foglio1)
+  const ws2 = XLSX.utils.json_to_sheet(foglio2)
+  const ws3 = XLSX.utils.json_to_sheet(foglio3)
+  
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Log')
+  XLSX.utils.book_append_sheet(wb, ws1, 'Task Log')
+  XLSX.utils.book_append_sheet(wb, ws2, 'Per Task')
+  XLSX.utils.book_append_sheet(wb, ws3, 'Per Argomento')
 
   const daStr = filtro.value.daData.replace(/-/g, '')
   const aStr  = filtro.value.aData.replace(/-/g, '')

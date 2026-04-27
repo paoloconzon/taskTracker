@@ -17,10 +17,16 @@
           <v-btn value="recenti" size="small">
             <v-icon start size="16">mdi-clock-outline</v-icon>Recenti
           </v-btn>
+          <v-btn value="priorita" size="small">
+            <v-icon start size="16">mdi-fire</v-icon>Priorità
+          </v-btn>
           <v-btn value="argomento" size="small">
             <v-icon start size="16">mdi-sort-alphabetical-ascending</v-icon>Argomento
           </v-btn>
         </v-btn-toggle>
+        <v-btn size="small" @click="exportExcel" title="Esporta in Excel">
+          <v-icon start>mdi-file-excel</v-icon>Excel
+        </v-btn>
         <v-btn size="small" :loading="loading" @click="load">
           <v-icon start>mdi-refresh</v-icon>Aggiorna
         </v-btn>
@@ -80,12 +86,15 @@
           </template>
 
           <div class="task-body py-1">
-            <!-- Riga 1: argomento + chips id/azione -->
+            <!-- Riga 1: argomento + chips id/azione/priorita -->
             <div class="d-flex align-center gap-2 flex-wrap">
               <span class="font-weight-medium text-body-1">
                 {{ task.argomento_path || task.argomento_nome }}
               </span>
               <v-chip size="x-small" variant="tonal" color="grey">#{{ task.id }}</v-chip>
+              <v-chip v-if="task.priorita" size="x-small" variant="elevated" :color="getPrioritaColor(task.priorita)" class="font-weight-bold">
+                {{ task.priorita }}
+              </v-chip>
               <v-chip v-if="task.azione_nome" size="x-small" variant="tonal">
                 {{ task.azione_nome }}
               </v-chip>
@@ -115,7 +124,7 @@
 
               <v-chip size="x-small" color="primary" variant="tonal">
                 <v-icon start size="12">mdi-timer</v-icon>
-                {{ formatDurata(task.secondi_totali) }}
+                {{ formatDurataHHmm(task.secondi_totali) }}
               </v-chip>
               <span v-if="task.ultimo_inizio" class="text-caption text-medium-emphasis">
                 ultimo: {{ formatDatetime(task.ultimo_inizio) }}
@@ -290,6 +299,15 @@ const taskOrdinati = computed(() => {
       return (b.ultimo_inizio || '').localeCompare(a.ultimo_inizio || '')
     })
   }
+  if (ordinamento.value === 'priorita') {
+    const prioritaOrder = { 'P1': 0, 'P2': 1, 'P3': 2, 'P4': 3, 'P5': 4, 'P6': 5 }
+    return [...tasks.value].sort((a, b) => {
+      const pa = prioritaOrder[a.priorita] ?? 2
+      const pb = prioritaOrder[b.priorita] ?? 2
+      if (pa !== pb) return pa - pb
+      return (b.ultimo_inizio || '').localeCompare(a.ultimo_inizio || '')
+    })
+  }
   // recenti: per ultimo task_log lavorato
   return [...tasks.value].sort((a, b) =>
     (b.ultimo_inizio || '').localeCompare(a.ultimo_inizio || '')
@@ -394,11 +412,64 @@ function formatDurata(sec) {
   return `${m}m`
 }
 
+function formatDurataHHmm(sec) {
+  if (!sec || sec < 0) return '00:00'
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
 function formatDatetime(s) {
   if (!s) return ''
   const clean = (s || '').replace(' ', '')
   const dt = dayjs(clean, 'YYYYMMDDHHmmss')
   return dt.isValid() ? dt.format('DD/MM HH:mm') : s
+}
+
+function getPrioritaColor(priorita) {
+  const colors = {
+    'P1': 'red',
+    'P2': 'red-lighten-1',
+    'P3': 'orange',
+    'P4': 'yellow',
+    'P5': 'light-green',
+    'P6': 'green'
+  }
+  return colors[priorita] || 'grey'
+}
+
+function exportExcel() {
+  try {
+    // Dinamicamente importa xlsx per non appesantire il bundle
+    import('xlsx').then(({ utils, writeFile }) => {
+      const data = tasks.value.map(t => ({
+        'ID': t.id,
+        'Argomento': t.argomento_path || t.argomento_nome,
+        'Descrizione': t.descrizione || '',
+        'Azione': t.azione_nome || '',
+        'Priorità': t.priorita || 'P3',
+        'Mantis': t.mantis || '',
+        'Ticket': t.ticket || '',
+        'Stato': t.se_chiuso ? 'CHIUSO' : 'APERTO',
+        'Tempo': formatDurataHHmm(t.secondi_totali),
+        'Ultimo inizio': formatDatetime(t.ultimo_inizio),
+      }))
+
+      const ws = utils.json_to_sheet(data)
+      const wb = utils.book_new()
+      utils.book_append_sheet(wb, ws, 'Task')
+      
+      // Auto-resize columns
+      const colWidths = [6, 30, 40, 15, 10, 15, 15, 10, 10, 16]
+      ws['!cols'] = colWidths.map(w => ({ wch: w }))
+
+      const filename = `tasktracker_${dayjs().format('YYYY-MM-DD_HHmmss')}.xlsx`
+      writeFile(wb, filename)
+      window.$notify('Excel esportato con successo', 'success')
+    })
+  } catch (e) {
+    window.$notify('Errore esportazione: ' + e.message, 'error')
+  }
 }
 
 onMounted(load)

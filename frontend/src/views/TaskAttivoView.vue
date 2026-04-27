@@ -24,11 +24,11 @@
       </v-card-title>
 
       <v-card-text class="pa-4 pt-2">
-        <v-row>
-          <v-col cols="12" md="6">
-            <ArgomentoSelect v-model="form.id_argomento" label="Argomento" class="mb-3" />
+        <v-row dense>
+          <v-col cols="12" md="4">
+            <ArgomentoSelect v-model="form.id_argomento" label="Argomento" />
           </v-col>
-          <v-col cols="12" md="6">
+          <v-col cols="12" md="4">
             <v-select
               v-model="form.id_azione"
               :items="azioni"
@@ -38,7 +38,15 @@
               variant="outlined"
               density="compact"
               clearable
-              class="mb-3"
+            />
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-select
+              v-model="form.priorita"
+              :items="['P1', 'P2', 'P3', 'P4', 'P5', 'P6']"
+              label="Priorità"
+              variant="outlined"
+              density="compact"
             />
           </v-col>
         </v-row>
@@ -52,6 +60,7 @@
           rows="3"
           clearable
           class="mb-3"
+          style="margin-top: 1rem"
         />
 
         <!-- Note log -->
@@ -117,6 +126,7 @@ const closing  = ref(false)
 const form = ref({
   id_argomento: null,
   id_azione:    null,
+  priorita:     'P3',
   descrizione:  '',
   note:         '',
   mantis: '', ticket: '', tags: '',
@@ -127,6 +137,7 @@ watch(task, (t) => {
     form.value = {
       id_argomento: t.id_argomento,
       id_azione:    t.id_azione    || null,
+      priorita:     t.priorita     || 'P3',
       descrizione:  t.log_descrizione || '',
       note:         t.log_note     || '',
       mantis: t.mantis || '', ticket: t.ticket || '', tags: t.tags || '',
@@ -150,6 +161,7 @@ async function salva() {
       id:           task.value.id,
       id_argomento: form.value.id_argomento,
       id_azione:    form.value.id_azione,
+      priorita:     form.value.priorita,
       mantis: form.value.mantis,
       ticket: form.value.ticket,
       tags: form.value.tags,

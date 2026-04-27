@@ -259,12 +259,109 @@ const COLORI_PRESET = [
 ]
 
 const ICONE_PRESET = [
-  'mdi-folder','mdi-folder-open','mdi-warehouse','mdi-truck','mdi-printer',
-  'mdi-laptop','mdi-wrench','mdi-cog','mdi-account-group','mdi-email',
-  'mdi-phone','mdi-chart-bar','mdi-shopping','mdi-cart','mdi-package',
-  'mdi-database','mdi-cloud','mdi-code-braces','mdi-file-document',
-  'mdi-magnify','mdi-star','mdi-heart','mdi-flag','mdi-home','mdi-office-building',
-  'mdi-car','mdi-airplane','mdi-coffee','mdi-school','mdi-hospital',
+  // Organizzazione
+  'mdi-folder','mdi-folder-open','mdi-folder-multiple','mdi-warehouse','mdi-archive',
+  'mdi-briefcase','mdi-filing-cabinet','mdi-inbox','mdi-inbox-multiple','mdi-inbox-full',
+  'mdi-library-shelves','mdi-layers',
+  
+  // Lavoro/Ufficio
+  'mdi-desk','mdi-office-building','mdi-hospital','mdi-school','mdi-university',
+  'mdi-factory','mdi-store','mdi-shopping-center','mdi-bank','mdi-courthouse',
+  'mdi-home','mdi-home-city','mdi-home-modern',
+  
+  // Trasporti
+  'mdi-truck','mdi-van','mdi-car','mdi-taxi','mdi-bus','mdi-train','mdi-airplane',
+  'mdi-helicopter','mdi-boat','mdi-bike','mdi-scooter','mdi-motorbike',
+  'mdi-ship','mdi-package-variant','mdi-package-variant-closed','mdi-dolly',
+  'mdi-forklift',
+  
+  // Tecnologia
+  'mdi-laptop','mdi-desktop-classic','mdi-monitor','mdi-tablet','mdi-cellphone',
+  'mdi-code-braces','mdi-code-tags','mdi-database','mdi-database-check','mdi-server',
+  'mdi-server-network','mdi-network','mdi-wifi','mdi-cloud','mdi-cloud-upload',
+  'mdi-cloud-download','mdi-cloud-sync','mdi-cloud-check','mdi-bug','mdi-bug-check',
+  'mdi-github','mdi-gitlab','mdi-git','mdi-console','mdi-terminal',
+  'mdi-application','mdi-application-braces','mdi-update',
+  
+  // Documenti
+  'mdi-file','mdi-file-document','mdi-file-pdf','mdi-file-excel','mdi-file-word',
+  'mdi-file-image','mdi-file-video','mdi-file-audio','mdi-file-zip','mdi-file-chart',
+  'mdi-file-multiple','mdi-file-tree','mdi-notebook','mdi-clipboard',
+  'mdi-clipboard-list','mdi-clipboard-check','mdi-note','mdi-note-multiple',
+  'mdi-text-box','mdi-text-box-multiple','mdi-page-layout-header-footer',
+  
+  // Comunicazione
+  'mdi-email','mdi-email-multiple','mdi-email-check','mdi-message','mdi-message-multiple',
+  'mdi-phone','mdi-phone-in-talk','mdi-phone-outgoing','mdi-phone-incoming','mdi-phone-missed',
+  'mdi-call-received','mdi-call-made','mdi-chat','mdi-chat-multiple','mdi-forum',
+  'mdi-comment','mdi-comment-multiple','mdi-comment-alert','mdi-comment-question',
+  'mdi-bell','mdi-bell-alert','mdi-bell-ring','mdi-bell-sleep','mdi-speaker',
+  'mdi-microphone','mdi-microphone-off','mdi-megaphone','mdi-announce',
+  
+  // Analisi/Dati
+  'mdi-chart-bar','mdi-chart-line','mdi-chart-pie','mdi-chart-box','mdi-chart-timeline',
+  'mdi-chart-multiple','mdi-chart-box-outline','mdi-graph','mdi-table','mdi-table-large',
+  'mdi-pivot-table','mdi-file-chart','mdi-calculator','mdi-sigma','mdi-percent',
+  'mdi-currency-usd','mdi-cash-multiple','mdi-trending-up','mdi-trending-down',
+  
+  // Sviluppo/Coding
+  'mdi-github','mdi-gitlab','mdi-git','mdi-github-face','mdi-source-branch',
+  'mdi-source-commit','mdi-source-commit-end','mdi-source-commit-end-local',
+  'mdi-source-commit-horizontal','mdi-source-commit-local','mdi-source-commit-next-local',
+  'mdi-source-fork','mdi-source-merge','mdi-source-pull','mdi-branch','mdi-merge',
+  'mdi-tag','mdi-tag-multiple','mdi-tag-outline','mdi-label','mdi-label-multiple',
+  'mdi-bookmark','mdi-bookmark-multiple','mdi-flag','mdi-flag-outline','mdi-flag-variant',
+  'mdi-flag-check','mdi-flag-checkered','mdi-pinned','mdi-pin','mdi-star','mdi-star-half',
+  'mdi-heart','mdi-thumb-up','mdi-thumb-down','mdi-hand-right','mdi-hand-left',
+  
+  // Azioni/Status
+  'mdi-check','mdi-check-circle','mdi-check-box','mdi-checkbox-marked','mdi-checkbox-blank',
+  'mdi-checkbox-marked-circle','mdi-close','mdi-close-circle','mdi-cancel','mdi-stop',
+  'mdi-stop-circle','mdi-pause','mdi-pause-circle','mdi-play','mdi-play-circle',
+  'mdi-record','mdi-play-pause','mdi-fast-forward','mdi-rewind','mdi-skip-next',
+  'mdi-skip-previous','mdi-next','mdi-previous','mdi-arrow-right','mdi-arrow-left',
+  'mdi-arrow-up','mdi-arrow-down','mdi-refresh','mdi-refresh-circle','mdi-sync',
+  'mdi-restart','mdi-power','mdi-power-on','mdi-power-off','mdi-lock','mdi-lock-open',
+  'mdi-unlock','mdi-key','mdi-key-variant','mdi-download','mdi-upload','mdi-import',
+  'mdi-export','mdi-share','mdi-share-variant','mdi-share-all','mdi-link','mdi-link-variant',
+  'mdi-send','mdi-send-circle','mdi-forward','mdi-reply','mdi-reply-all',
+  'mdi-menu','mdi-menu-open','mdi-menu-down','mdi-menu-up','mdi-menu-left','mdi-menu-right',
+  'mdi-more-vertical','mdi-more-horizontal','mdi-dots-vertical','mdi-dots-horizontal',
+  
+  // Utilità
+  'mdi-wrench','mdi-wrench-check','mdi-wrench-clock','mdi-hammer','mdi-hammer-wrench',
+  'mdi-screwdriver','mdi-screwdriver-box','mdi-toolbox','mdi-tools','mdi-cog','mdi-cog-sync',
+  'mdi-cog-clock','mdi-gear-outline','mdi-gears','mdi-settings','mdi-settings-box',
+  'mdi-settings-helper','mdi-settings-outline','mdi-palette','mdi-palette-advanced',
+  'mdi-format-paint','mdi-eyedropper','mdi-magnify','mdi-magnify-plus','mdi-magnify-minus',
+  'mdi-binoculars','mdi-telescope','mdi-lightbulb','mdi-lightbulb-on','mdi-lightbulb-off',
+  'mdi-lightbulb-alert','mdi-flashlight','mdi-flashlight-off','mdi-lamp','mdi-lamp-outline',
+  
+  // Personas
+  'mdi-account','mdi-account-box','mdi-account-circle','mdi-account-multiple',
+  'mdi-account-group','mdi-account-supervisor','mdi-account-supervisor-circle',
+  'mdi-account-tie','mdi-account-edit','mdi-account-lock','mdi-account-remove',
+  'mdi-account-convert','mdi-account-network','mdi-face','mdi-face-man','mdi-face-woman',
+  'mdi-face-agent','mdi-emoticon','mdi-emoticon-cool','mdi-emoticon-dead','mdi-emoticon-excited',
+  'mdi-emoticon-happy','mdi-emoticon-sad','mdi-emoticon-tongue','mdi-robotics',
+  
+  // Tempo
+  'mdi-calendar','mdi-calendar-today','mdi-calendar-check','mdi-calendar-clock','mdi-clock',
+  'mdi-clock-outline','mdi-clock-alert','mdi-history','mdi-timer','mdi-timer-10','mdi-timer-3',
+  'mdi-alarm','mdi-alarm-check','mdi-alarm-off','mdi-alarm-multiple','mdi-alarm-note',
+  'mdi-hourglass','mdi-hourglass-end','mdi-hourglass-start','mdi-stopwatch',
+  'mdi-progress-clock','mdi-av-timer','mdi-fast-forward','mdi-rewind',
+  
+  // Altro
+  'mdi-priority-high','mdi-priority-low','mdi-exclamation','mdi-alert','mdi-alert-box',
+  'mdi-alert-circle','mdi-information','mdi-help','mdi-help-circle','mdi-help-box',
+  'mdi-help-network','mdi-help-network-outline','mdi-progress-check','mdi-progress-download',
+  'mdi-progress-upload','mdi-progress-pencil','mdi-progress-alert','mdi-progress-question',
+  'mdi-progress-wrench','mdi-progress-clock','mdi-progress-close','mdi-progress-helper',
+  'mdi-fingerprint','mdi-badge-account','mdi-badge-account-horizontal','mdi-badge-account-outline',
+  'mdi-star-check','mdi-star-circle','mdi-target','mdi-target-account','mdi-target-variant',
+  'mdi-clipboard-alert','mdi-cube','mdi-dice-1','mdi-dice-2','mdi-dice-3','mdi-dice-4','mdi-dice-5','mdi-dice-6',
+  'mdi-puzzle','mdi-puzzle-outline','mdi-jigsaw','mdi-lock-reset','mdi-battery','mdi-battery-alert',
 ]
 
 const loading           = ref(false)

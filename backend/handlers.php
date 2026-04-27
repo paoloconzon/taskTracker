@@ -235,7 +235,10 @@ function getTaskLog(array $f, array $sess): void {
                    t.se_chiuso as task_chiuso,
                    t.mantis     as task_mantis,
                    t.ticket     as task_ticket,
+                   t.priorita   as task_priorita,
+                   t.descrizione as task_descrizione,
                    arg.nome   as argomento_nome,
+                   arg.descrizione as argomento_descrizione,
                    arg.colore as argomento_colore,
                    arg.icona  as argomento_icona,
                    arg.se_pausa,
@@ -378,22 +381,24 @@ function putTask(array $v, array $sess): void {
         // Se 'descrizione' non è presente nel payload non la sovrascrive
         if (array_key_exists('descrizione', $v)) {
             $db->prepare(
-                'UPDATE WP_TT_TASK SET id_argomento=?,id_azione=?,se_chiuso=?,descrizione=?,mantis=?,ticket=?,tags=?
+                'UPDATE WP_TT_TASK SET id_argomento=?,id_azione=?,se_chiuso=?,descrizione=?,mantis=?,ticket=?,tags=?,priorita=?
                   WHERE id=? AND id_utente=?'
             )->execute([
                 $v['id_argomento'], $v['id_azione'] ?: null,
                 $v['se_chiuso'] ? 1 : 0, $v['descrizione'],
                 $v['mantis'] ?? null, $v['ticket'] ?? null, $v['tags'] ?? null,
+                $v['priorita'] ?? 'P3',
                 $v['id'], $sess['idUtente']
             ]);
         } else {
             $db->prepare(
-                'UPDATE WP_TT_TASK SET id_argomento=?,id_azione=?,se_chiuso=?,mantis=?,ticket=?,tags=?
+                'UPDATE WP_TT_TASK SET id_argomento=?,id_azione=?,se_chiuso=?,mantis=?,ticket=?,tags=?,priorita=?
                   WHERE id=? AND id_utente=?'
             )->execute([
                 $v['id_argomento'], $v['id_azione'] ?: null,
                 $v['se_chiuso'] ? 1 : 0,
                 $v['mantis'] ?? null, $v['ticket'] ?? null, $v['tags'] ?? null,
+                $v['priorita'] ?? 'P3',
                 $v['id'], $sess['idUtente']
             ]);
         }
@@ -410,12 +415,13 @@ function putTask(array $v, array $sess): void {
         chiudiTaskAttivo($sess['idUtente'], $db, $now);
 
         $db->prepare(
-            'INSERT INTO WP_TT_TASK (id_utente,id_argomento,id_azione,se_chiuso,descrizione,mantis,ticket,tags)
-             VALUES (?,?,?,0,?,?,?,?)'
+            'INSERT INTO WP_TT_TASK (id_utente,id_argomento,id_azione,se_chiuso,descrizione,mantis,ticket,tags,priorita)
+             VALUES (?,?,?,0,?,?,?,?,?)'
         )->execute([
             $sess['idUtente'], $v['id_argomento'], $v['id_azione'] ?: null,
             $v['descrizione'] ?? null,
             $v['mantis'] ?? null, $v['ticket'] ?? null, $v['tags'] ?? null,
+            $v['priorita'] ?? 'P3',
         ]);
         $taskId = (int)$db->lastInsertId();
 
