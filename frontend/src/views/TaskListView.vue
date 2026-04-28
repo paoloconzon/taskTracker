@@ -241,18 +241,36 @@
     <v-card>
       <v-card-title class="pa-4 pb-2">
         <v-icon start>mdi-pencil</v-icon>
-        Modifica descrizione task #{{ editingTask?.id }}
+        Modifica task #{{ editingTask?.id }}
       </v-card-title>
-      <v-card-text>
-        <v-textarea
-          v-model="editingDescrizione"
-          label="Descrizione"
-          variant="outlined"
-          rows="4"
-          autofocus
-        />
+      <v-card-text class="pa-4">
+        <v-row dense>
+          <v-col cols="12">
+            <v-textarea
+              v-model="editingDescrizione"
+              label="Descrizione"
+              variant="outlined"
+              rows="3"
+              autofocus
+              class="mb-2"
+            />
+          </v-col>
+          <v-col cols="12">
+            <v-select
+              v-model="editingAzione"
+              :items="azioni"
+              item-title="nome"
+              item-value="id"
+              label="Azione"
+              variant="outlined"
+              density="compact"
+              clearable
+              hide-details
+            />
+          </v-col>
+        </v-row>
       </v-card-text>
-      <v-card-actions>
+      <v-card-actions class="pa-4">
         <v-spacer />
         <v-btn @click="editDialog = false">Annulla</v-btn>
         <v-btn color="primary" variant="elevated" :loading="salvandoDescrizione" @click="salvaDescrizione">
@@ -266,7 +284,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useTaskStore }  from '../stores/task.js'
-import { apiGetTask, apiRiprendi, apiChiudiTask, apiGetTaskAttivo, apiPutTask, apiGetTaskLog } from '../api/index.js'
+import { apiGetTask, apiRiprendi, apiChiudiTask, apiGetTaskAttivo, apiPutTask, apiGetTaskLog, apiGetAzioni } from '../api/index.js'
 import dayjs             from 'dayjs'
 
 const store        = useTaskStore()
@@ -282,11 +300,13 @@ const ordinamento       = ref('recenti')
 const editDialog        = ref(false)
 const editingTask       = ref(null)
 const editingDescrizione = ref('')
+const editingAzione     = ref(null)
 const salvandoDescrizione = ref(false)
 const storiaDialog      = ref(false)
 const storiaTask        = ref(null)
 const storiaLogs        = ref([])
 const storiaLoading     = ref(false)
+const azioni            = ref([])
 
 const taskAttivoId = computed(() => store.taskAttivo?.id || null)
 
@@ -378,16 +398,29 @@ async function apriStoria(task) {
 function apriEditDescrizione(task) {
   editingTask.value = task
   editingDescrizione.value = task.descrizione || ''
+  editingAzione.value = task.id_azione || null
   editDialog.value = true
 }
 
 async function salvaDescrizione() {
   salvandoDescrizione.value = true
   try {
-    await apiPutTask({ ...editingTask.value, descrizione: editingDescrizione.value })
+    await apiPutTask({ 
+      ...editingTask.value, 
+      descrizione: editingDescrizione.value,
+      id_azione: editingAzione.value
+    })
     editingTask.value.descrizione = editingDescrizione.value
+    editingTask.value.id_azione = editingAzione.value
+    // Aggiorna il nome dell'azione se richiesto
+    if (editingAzione.value) {
+      const azione = azioni.value.find(a => a.id === editingAzione.value)
+      editingTask.value.azione_nome = azione?.nome || ''
+    } else {
+      editingTask.value.azione_nome = ''
+    }
     editDialog.value = false
-    window.$notify('Descrizione aggiornata', 'success')
+    window.$notify('Task aggiornato', 'success')
   } catch (e) {
     window.$notify(e.message, 'error')
   } finally {
@@ -472,7 +505,15 @@ function exportExcel() {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  await load()
+  try {
+    const r = await apiGetAzioni()
+    azioni.value = r.data.elenco || []
+  } catch {
+    // non bloccante
+  }
+})
 </script>
 
 <style scoped>

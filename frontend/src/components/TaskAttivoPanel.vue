@@ -166,18 +166,18 @@ async function salva() {
     await apiPutTask({
       id:           task.value.id,
       id_argomento: form.value.id_argomento,
-      id_azione:    form.value.id_azione,
       mantis: form.value.mantis,
       ticket: form.value.ticket,
       tags: form.value.tags,
       se_chiuso: 0,
     })
-    // Aggiorna anche il log corrente (note)
+    // Aggiorna il log corrente (note + id_azione)
     if (task.value.log_id) {
       await apiPutTaskLog({
         id:             task.value.log_id,
         id_task:        task.value.id,
         descrizione:    form.value.descrizione,
+        id_azione:      form.value.id_azione,
         data_ora_inizio: task.value.log_inizio,
         note:           form.value.note,
       })

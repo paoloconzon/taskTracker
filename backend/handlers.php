@@ -224,9 +224,9 @@ function getTaskLog(array $f, array $sess): void {
     }
 
     if (!empty($f['testo'])) {
-        $where[] = '(tl.descrizione LIKE ? OR tl.note LIKE ? OR arg.nome LIKE ? OR p1.nome LIKE ? OR p2.nome LIKE ? OR az.nome LIKE ? OR t.mantis LIKE ? OR t.ticket LIKE ?)';
+        $where[] = '(tl.descrizione LIKE ? OR tl.note LIKE ? OR arg.nome LIKE ? OR p1.nome LIKE ? OR p2.nome LIKE ? OR az_log.nome LIKE ? OR az.nome LIKE ? OR t.mantis LIKE ? OR t.ticket LIKE ?)';
         $t = '%'.$f['testo'].'%';
-        $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t;
+        $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t; $bind[] = $t;
     }
 
     $sql = 'SELECT tl.*,
@@ -244,7 +244,8 @@ function getTaskLog(array $f, array $sess): void {
                    arg.se_pausa,
                    p1.nome    as arg_padre_nome,
                    p2.nome    as arg_nonno_nome,
-                   az.nome    as azione_nome,
+                   az_log.nome as azione_log_nome,
+                   az.nome    as azione_task_nome,
                    u.descrizione as utente_descrizione,
                    TIMESTAMPDIFF(SECOND, tl.data_ora_inizio, IFNULL(tl.data_ora_fine, NOW())) as secondi,
                    -- path argomento
@@ -257,6 +258,7 @@ function getTaskLog(array $f, array $sess): void {
               JOIN WP_TT_ARGOMENTI arg ON arg.id = t.id_argomento
               LEFT JOIN WP_TT_ARGOMENTI p1 ON p1.id = arg.id_argomento_padre
               LEFT JOIN WP_TT_ARGOMENTI p2 ON p2.id = p1.id_argomento_padre
+              LEFT JOIN WP_TT_AZIONE az_log ON az_log.id = tl.id_azione
               LEFT JOIN WP_TT_AZIONE az ON az.id = t.id_azione
               JOIN WP_TT_UTENTI u ON u.id = t.id_utente
              WHERE '.implode(' AND ', $where).'
@@ -444,15 +446,26 @@ function putTaskLog(array $v, array $sess): void {
 
     if (!empty($v['id'])) {
         $db->prepare(
-            'UPDATE WP_TT_TASK_LOG SET descrizione=?,data_ora_inizio=?,data_ora_fine=?,note=?
+            'UPDATE WP_TT_TASK_LOG SET descrizione=?,data_ora_inizio=?,data_ora_fine=?,note=?,id_azione=?
               WHERE id=?'
-        )->execute([$v['descrizione'] ?? null, $inizio, $fine, $v['note'] ?? null, $v['id']]);
+        )->execute([$v['descrizione'] ?? null, $inizio, $fine, $v['note'] ?? null, $v['id_azione'] ?? null, $v['id']]);
         ok(['id' => (int)$v['id']]);
     } else {
+        // Se id_azione non è presente, usa quella del task
+        $idAzione = $v['id_azione'] ?? null;
+        if ($idAzione === null && !empty($v['id_task'])) {
+            $stmt = $db->prepare('SELECT id_azione FROM WP_TT_TASK WHERE id=?');
+            $stmt->execute([(int)$v['id_task']]);
+            $task = $stmt->fetch();
+            if ($task !== false) {
+                $idAzione = $task['id_azione'] ?? null;
+            }
+        }
+
         $db->prepare(
-            'INSERT INTO WP_TT_TASK_LOG (id_task,descrizione,data_ora_inizio,data_ora_fine,note)
-             VALUES (?,?,?,?,?)'
-        )->execute([$v['id_task'], $v['descrizione'] ?? null, $inizio, $fine, $v['note'] ?? null]);
+            'INSERT INTO WP_TT_TASK_LOG (id_task,id_azione,descrizione,data_ora_inizio,data_ora_fine,note)
+             VALUES (?,?,?,?,?,?)'
+        )->execute([$v['id_task'], $idAzione, $v['descrizione'] ?? null, $inizio, $fine, $v['note'] ?? null]);
         ok(['id' => (int)$db->lastInsertId()]);
     }
 }

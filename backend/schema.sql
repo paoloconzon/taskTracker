@@ -67,12 +67,14 @@ CREATE TABLE IF NOT EXISTS WP_TT_TASK (
 CREATE TABLE IF NOT EXISTS WP_TT_TASK_LOG (
     id              INT AUTO_INCREMENT PRIMARY KEY,
     id_task              INT           NOT NULL,
+    id_azione            INT           NULL,
     descrizione          VARCHAR(1024),
     data_ora_inizio      DATETIME      NOT NULL,
     data_ora_fine        DATETIME      NULL,
     note                 TEXT,
     se_esportato_mantis  TINYINT(1)    NOT NULL DEFAULT 0,
-    FOREIGN KEY (id_task) REFERENCES WP_TT_TASK(id)
+    FOREIGN KEY (id_task)   REFERENCES WP_TT_TASK(id),
+    FOREIGN KEY (id_azione) REFERENCES WP_TT_AZIONE(id)
 ) ENGINE=InnoDB;
 
 -- ============================================================

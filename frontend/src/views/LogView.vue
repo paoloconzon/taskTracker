@@ -109,8 +109,11 @@
         </template>
 
         <template #item.azione_nome="{ item }">
-          <v-chip v-if="item.azione_nome" size="x-small" variant="tonal">
-            {{ item.azione_nome }}
+          <v-chip v-if="item.azione_log_nome" size="x-small" variant="tonal" color="primary">
+            {{ item.azione_log_nome }}
+          </v-chip>
+          <v-chip v-else-if="item.azione_task_nome" size="x-small" variant="tonal" color="grey">
+            {{ item.azione_task_nome }}
           </v-chip>
         </template>
 
@@ -203,6 +206,19 @@
             density="compact"
             rows="3"
             clearable
+            class="mb-3"
+          />
+
+          <v-select
+            v-model="editForm.id_azione"
+            :items="azioni"
+            item-title="nome"
+            item-value="id"
+            label="Azione"
+            variant="outlined"
+            density="compact"
+            clearable
+            hide-details
           />
         </v-card-text>
 
@@ -223,7 +239,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { apiGetTaskLog, apiPutTaskLog, apiDelTaskLog, apiGetUtenti } from '../api/index.js'
+import { apiGetTaskLog, apiPutTaskLog, apiDelTaskLog, apiGetUtenti, apiGetAzioni } from '../api/index.js'
 import { useSessionStore } from '../stores/session.js'
 import dayjs               from 'dayjs'
 import * as XLSX           from 'xlsx'
@@ -237,6 +253,7 @@ const righe   = ref([])
 const totaleSecondi = ref(0)
 const dialog  = ref(false)
 const editForm = ref(null)
+const azioni   = ref([])
 
 const today      = dayjs().format('YYYY-MM-DD')
 const filtro     = ref({ daData: today, aData: today, testo: '', idUtente: null })
@@ -314,6 +331,7 @@ async function salva() {
       id_task:        editForm.value.id_task,
       descrizione:    editForm.value.descrizione || null,
       note:           editForm.value.note        || null,
+      id_azione:      editForm.value.id_azione   || null,
       data_ora_inizio: fromDatetimeLocal(editForm.value.inizio_input),
       data_ora_fine:   fromDatetimeLocal(editForm.value.fine_input),
     })
@@ -420,7 +438,7 @@ function esportaExcel() {
         id_task: r.id_task,
         task_ticket: r.task_ticket,
         task_mantis: r.task_mantis,
-        azione_nome: r.azione_nome,
+        azione_task_nome: r.azione_task_nome,
         task_priorita: r.task_priorita,
         argomento_nome: r.argomento_nome,
         arg_padre_nome: r.arg_padre_nome,
@@ -447,7 +465,7 @@ function esportaExcel() {
     return {
       'Tempo':                      formatDurataHHmm(task.secondi),
       'Argomento':                  argomento,
-      'Azione':                     task.azione_nome || '',
+      'Azione':                     task.azione_task_nome || '',
       'Priorità':                   task.task_priorita || '',
       'Ticket':                     task.task_ticket || '',
       'Mantis':                     task.task_mantis || '',
@@ -515,6 +533,10 @@ function esportaExcel() {
 
 onMounted(async () => {
   await load()
+  try {
+    const r = await apiGetAzioni()
+    azioni.value = r.data.elenco || []
+  } catch { /* non bloccante */ }
   if (sess.isAdmin()) {
     try {
       const r = await apiGetUtenti()
